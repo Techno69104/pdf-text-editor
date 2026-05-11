@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Text Editor - Edit PDF Like a Document</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #1a1a2e; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .toolbar {
+            background: #16213e;
+            padding: 12px 24px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            border-bottom: 1px solid #0f3460;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .toolbar button {
+            background: #0f3460;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .toolbar button:hover { background: #e94560; }
+        .toolbar button.active {
+            background: #e94560;
+            box-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
+        }
+        .upload-btn {
+            background: #e94560 !important;
+        }
+        .status {
+            margin-left: auto;
+            color: #4ecdc4;
+            font-size: 14px;
+        }
+        #pdf-container {
+            background: #2c2c3e;
+            min-height: calc(100vh - 60px);
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+        }
+        .pdf-page-wrapper {
+            position: relative;
+            margin: 0 auto 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        canvas {
+            display: block;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+        .text-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            cursor: text;
+        }
+        .editable-text {
+            position: absolute;
+            background: transparent;
+            cursor: text;
+            transition: background 0.1s;
+            font-family: inherit;
+        }
+        .editable-text:hover {
+            background: rgba(233, 69, 96, 0.1);
+            outline: 1px dashed #e94560;
+        }
+        .editable-text.editing {
+            background: rgba(255, 255, 255, 0.9);
+            outline: 2px solid #e94560;
+            z-index: 1000;
+        }
+        .editable-text textarea {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+            font-family: inherit;
+            font-size: inherit;
+            resize: none;
+            padding: 0;
+            margin: 0;
+            outline: none;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .saving {
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <input type="file" id="pdf-upload" accept=".pdf" style="display: none;">
+        <button class="upload-btn" onclick="document.getElementById('pdf-upload').click()">📄 Upload PDF</button>
+        <button id="edit-mode-btn">✏️ Edit Text Mode</button>
+        <button id="save-btn" style="display: none;">💾 Save Changes</button>
+        <div class="status" id="status">Ready - Upload a PDF to start editing</div>
+    </div>
+    <div id="pdf-container"></div>
+
+    <script src="editor.js"></script>
+</body>
+</html>
