@@ -1,9 +1,9 @@
 services:
   - type: web
     name: pdf-text-editor
-    runtime: python3
-    buildCommand: pip install -r backend/requirements.txt
+    runtime: image
+    buildCommand: ./render-build.sh
     startCommand: cd backend && gunicorn app:app
-    environment:
-      - key: PYTHONUNBUFFERED
-        value: "true"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
