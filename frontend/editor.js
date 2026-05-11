@@ -144,27 +144,22 @@ function renderTextOverlay() {
     if (existingLayer) existingLayer.remove();
     
     if (currentPageBlocks.length === 0) {
-        // No editable text found
-        if (editMode) {
-            const noTextMsg = document.createElement('div');
-            noTextMsg.className = 'text-layer';
-            noTextMsg.style.position = 'absolute';
-            noTextMsg.style.top = '50%';
-            noTextMsg.style.left = '50%';
-            noTextMsg.style.transform = 'translate(-50%, -50%)';
-            noTextMsg.style.color = '#e94560';
-            noTextMsg.style.background = 'rgba(0,0,0,0.7)';
-            noTextMsg.style.padding = '10px 20px';
-            noTextMsg.style.borderRadius = '8px';
-            noTextMsg.style.fontSize = '14px';
-            noTextMsg.style.whiteSpace = 'nowrap';
-            noTextMsg.innerHTML = '⚠️ No editable text found on this page';
-            wrapper.appendChild(noTextMsg);
-        }
+        const noTextMsg = document.createElement('div');
+        noTextMsg.className = 'text-layer';
+        noTextMsg.style.position = 'absolute';
+        noTextMsg.style.top = '50%';
+        noTextMsg.style.left = '50%';
+        noTextMsg.style.transform = 'translate(-50%, -50%)';
+        noTextMsg.style.color = '#e94560';
+        noTextMsg.style.background = 'rgba(0,0,0,0.7)';
+        noTextMsg.style.padding = '10px 20px';
+        noTextMsg.style.borderRadius = '8px';
+        noTextMsg.style.fontSize = '14px';
+        noTextMsg.innerHTML = '⚠️ No text found on this page. Try a different PDF.';
+        wrapper.appendChild(noTextMsg);
         return;
     }
     
-    // Create new text layer
     const textLayer = document.createElement('div');
     textLayer.className = 'text-layer';
     textLayer.style.position = 'absolute';
@@ -174,50 +169,44 @@ function renderTextOverlay() {
     textLayer.style.height = '100%';
     textLayer.style.pointerEvents = editMode ? 'auto' : 'none';
     
-    currentPageBlocks.forEach((block, index) => {
+    currentPageBlocks.forEach((block) => {
         const textDiv = document.createElement('div');
         textDiv.className = 'editable-text';
         textDiv.setAttribute('data-id', block.id);
-        textDiv.setAttribute('data-bbox', JSON.stringify(block.bbox));
         textDiv.setAttribute('data-original-text', block.text);
-        textDiv.setAttribute('data-size', block.size);
-        textDiv.setAttribute('data-font', block.font || 'helv');
-        textDiv.setAttribute('data-page', block.page);
         
         // Position using bbox coordinates
-        // Note: PDF coordinates are from bottom-left, need to convert for CSS
         const viewport = window.currentViewport;
-        const x = block.bbox[0];
-        const y = viewport.height - block.bbox[3]; // Convert from bottom-left to top-left
-        const width = block.bbox[2] - block.bbox[0];
-        const height = block.bbox[3] - block.bbox[1];
+        const scale = viewport.width / 612; // PDF standard width is 612 points
+        
+        const x = block.bbox[0] * scale;
+        const y = block.bbox[1] * scale;
+        const width = (block.bbox[2] - block.bbox[0]) * scale;
+        const height = (block.bbox[3] - block.bbox[1]) * scale;
         
         textDiv.style.position = 'absolute';
         textDiv.style.left = `${x}px`;
         textDiv.style.top = `${y}px`;
         textDiv.style.width = `${width}px`;
         textDiv.style.height = `${height}px`;
-        textDiv.style.fontSize = `${block.size}px`;
-        textDiv.style.lineHeight = `${block.size}px`;
-        textDiv.style.fontFamily = block.font === 'bold' ? 'Arial Black, sans-serif' : 'Arial, sans-serif';
-        textDiv.style.fontWeight = block.flags === 2**0 ? 'bold' : 'normal';
-        textDiv.style.fontStyle = block.flags === 2**1 ? 'italic' : 'normal';
+        textDiv.style.fontSize = `${block.size * scale}px`;
+        textDiv.style.lineHeight = `${block.size * scale}px`;
+        textDiv.style.fontFamily = 'Arial, sans-serif';
+        textDiv.style.whiteSpace = 'pre-wrap';
+        textDiv.style.overflow = 'hidden';
         
-        // Display text
         textDiv.innerHTML = block.text;
         
-        // Make editable in edit mode
         if (editMode) {
             textDiv.contentEditable = 'true';
-            textDiv.setAttribute('data-original-text', block.text);
+            textDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+            textDiv.style.border = '1px solid #e94560';
             
-            // Handle text editing
             textDiv.addEventListener('blur', async (e) => {
                 const newText = e.target.innerText.trim();
                 const oldText = e.target.getAttribute('data-original-text');
                 
                 if (newText !== oldText && newText !== '') {
-                    // Store edit
                     activeEdits[block.id] = {
                         id: block.id,
                         page: block.page,
@@ -227,40 +216,8 @@ function renderTextOverlay() {
                         size: block.size,
                         font: block.font
                     };
-                    
-                    // Visual feedback
-                    textDiv.style.background = 'rgba(78, 205, 196, 0.2)';
-                    textDiv.style.outline = '2px solid #4ecdc4';
-                    
-                    showStatus(`✏️ Text changed. Click "Save Changes" to apply.`);
-                    
-                    // Update stored original text
-                    textDiv.setAttribute('data-original-text', newText);
-                } else if (newText === '') {
-                    // Restore original if empty
-                    textDiv.innerHTML = oldText;
-                    showStatus('⚠️ Text cannot be empty');
-                }
-            });
-            
-            // Handle Enter key (create new line instead of submitting)
-            textDiv.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    document.execCommand('insertLineBreak');
-                }
-            });
-            
-            // Highlight on hover
-            textDiv.addEventListener('mouseenter', () => {
-                if (!textDiv.classList.contains('editing')) {
-                    textDiv.style.outline = '1px dashed #e94560';
-                }
-            });
-            
-            textDiv.addEventListener('mouseleave', () => {
-                if (!textDiv.classList.contains('editing')) {
-                    textDiv.style.outline = 'none';
+                    textDiv.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
+                    showStatus(`✏️ Changed: "${oldText}" → "${newText}"`);
                 }
             });
         }
@@ -270,11 +227,10 @@ function renderTextOverlay() {
     
     wrapper.appendChild(textLayer);
     
-    if (editMode && currentPageBlocks.length > 0) {
-        showStatus(`✅ ${currentPageBlocks.length} text blocks ready for editing`);
+    if (editMode) {
+        showStatus(`✅ ${currentPageBlocks.length} text blocks ready to edit. Click any text!`);
     }
 }
-
 // ============================================
 // SAVE FUNCTIONALITY
 // ============================================
