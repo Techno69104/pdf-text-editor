@@ -1,0 +1,462 @@
+/* Reset & Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #2c2c3e;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #e94560;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #c7354f;
+}
+
+/* Toolbar */
+.toolbar {
+    background: rgba(22, 30, 53, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 12px 24px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    border-bottom: 1px solid rgba(15, 52, 96, 0.5);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Buttons */
+.toolbar button {
+    background: linear-gradient(135deg, #0f3460 0%, #0a2540 100%);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.toolbar button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.toolbar button:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.toolbar button:hover {
+    background: linear-gradient(135deg, #e94560 0%, #c7354f 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4);
+}
+
+.toolbar button:active {
+    transform: translateY(0);
+}
+
+.toolbar button.active {
+    background: linear-gradient(135deg, #e94560 0%, #c7354f 100%);
+    box-shadow: 0 0 15px rgba(233, 69, 96, 0.6);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 15px rgba(233, 69, 96, 0.6);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(233, 69, 96, 0.9);
+    }
+}
+
+.upload-btn {
+    background: linear-gradient(135deg, #e94560 0%, #c7354f 100%) !important;
+}
+
+/* Status Indicator */
+.status {
+    margin-left: auto;
+    color: #4ecdc4;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: rgba(78, 205, 196, 0.1);
+    transition: all 0.3s;
+}
+
+.status.saving {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* PDF Container */
+#pdf-container {
+    background: rgba(44, 44, 62, 0.8);
+    backdrop-filter: blur(5px);
+    min-height: calc(100vh - 60px);
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* PDF Page Wrapper */
+.pdf-page-wrapper {
+    position: relative;
+    margin: 0 auto;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.pdf-page-wrapper:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+}
+
+/* Canvas Styling */
+canvas {
+    display: block;
+    background: white;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Text Layer */
+.text-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+/* Editable Text Elements */
+.editable-text {
+    position: absolute;
+    background: transparent;
+    cursor: text;
+    transition: all 0.2s ease;
+    pointer-events: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow: hidden;
+    font-family: inherit;
+    line-height: 1.2;
+    padding: 2px 0;
+}
+
+.editable-text:hover {
+    background: rgba(233, 69, 96, 0.15);
+    outline: 2px dashed #e94560;
+    outline-offset: 2px;
+    cursor: text;
+}
+
+.editable-text.editing {
+    background: rgba(255, 255, 255, 0.95);
+    outline: 3px solid #e94560;
+    outline-offset: 2px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    cursor: text;
+}
+
+/* Content Editable Styling */
+.editable-text[contenteditable="true"] {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 4px;
+    margin: -2px;
+}
+
+.editable-text[contenteditable="true"]:focus {
+    background: white;
+    outline: none;
+    box-shadow: 0 0 0 2px #e94560, 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading Animation */
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+.loading {
+    background: linear-gradient(90deg, #2c2c3e 25%, #3c3c52 50%, #2c2c3e 75%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+}
+
+/* Modal/Overlay for Save Confirmation */
+.save-confirm {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #4ecdc4;
+    color: #1a1a2e;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 2000;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .toolbar {
+        padding: 8px 12px;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .toolbar button {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    
+    #pdf-container {
+        padding: 20px;
+    }
+    
+    .status {
+        font-size: 11px;
+        margin-left: 0;
+        order: -1;
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .toolbar button {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .toolbar {
+        display: none;
+    }
+    
+    #pdf-container {
+        background: white;
+        padding: 0;
+    }
+    
+    .editable-text {
+        display: none;
+    }
+}
+
+/* Tooltip */
+[data-tooltip] {
+    position: relative;
+}
+
+[data-tooltip]:before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 5px 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    font-size: 12px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    margin-bottom: 5px;
+}
+
+[data-tooltip]:hover:before {
+    opacity: 1;
+}
+
+/* Success Animation */
+@keyframes successPulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.save-success {
+    animation: successPulse 0.5s ease;
+}
+
+/* Drag & Drop Zone */
+.upload-zone {
+    border: 2px dashed #e94560;
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.05);
+    transition: all 0.3s;
+}
+
+.upload-zone.drag-over {
+    background: rgba(233, 69, 96, 0.1);
+    border-color: #4ecdc4;
+    transform: scale(1.02);
+}
+
+/* Page Navigation */
+.page-nav {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin: 20px auto;
+    padding: 10px;
+    background: rgba(22, 30, 53, 0.9);
+    border-radius: 40px;
+    backdrop-filter: blur(10px);
+}
+
+.page-nav button {
+    background: #e94560;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.page-nav span {
+    color: white;
+    font-weight: 500;
+}
+
+/* Scrollable Container for Multi-page PDF */
+.pdf-pages-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    width: 100%;
+}
+
+/* Custom File Input */
+.custom-file-input {
+    display: inline-block;
+    position: relative;
+}
+
+.custom-file-input input {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+/* Progress Bar */
+.progress-bar {
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1001;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #e94560, #4ecdc4);
+    width: 0%;
+    transition: width 0.3s;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    padding: 20px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    background: rgba(22, 30, 53, 0.95);
+}
+
+.footer a {
+    color: #e94560;
+    text-decoration: none;
+}
+
+.footer a:hover {
+    text-decoration: underline;
+}
