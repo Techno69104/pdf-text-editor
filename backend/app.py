@@ -13,7 +13,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 current_pdf_path = None
 current_editor = None
 
-# Serve frontend files
 @app.route('/')
 def serve_frontend():
     return send_from_directory('../frontend', 'index.html')
@@ -56,7 +55,7 @@ def edit_text():
         old_text=data['old_text'],
         new_text=data['new_text'],
         font_size=data['size'],
-        font_name=data.get('font', 'helv')
+        font_name=data.get('font', 'Helvetica')
     )
     
     output_path = os.path.join(UPLOAD_FOLDER, 'edited.pdf')
