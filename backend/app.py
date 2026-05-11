@@ -3,9 +3,10 @@ from flask_cors import CORS
 import os
 import tempfile
 import pdfplumber
+import pytesseract
+from pdf2image import convert_from_path
+from PIL import Image
 import shutil
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
 import io
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
@@ -15,7 +16,6 @@ UPLOAD_FOLDER = tempfile.gettempdir()
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 current_pdf_path = None
-current_page_count = 0
 
 @app.route('/')
 def serve_frontend():
@@ -27,7 +27,7 @@ def serve_static(path):
 
 @app.route('/upload', methods=['POST'])
 def upload_pdf():
-    global current_pdf_path, current_page_count
+    global current_pdf_path
     
     if 'pdf' not in request.files:
         return jsonify({'error': 'No PDF file provided'}), 400
@@ -36,11 +36,7 @@ def upload_pdf():
     current_pdf_path = os.path.join(UPLOAD_FOLDER, 'current.pdf')
     file.save(current_pdf_path)
     
-    # Get page count
-    with pdfplumber.open(current_pdf_path) as pdf:
-        current_page_count = len(pdf.pages)
-    
-    return jsonify({'status': 'success', 'pages': current_page_count})
+    return jsonify({'status': 'success', 'message': 'PDF loaded'})
 
 @app.route('/pages/<int:page_num>/text', methods=['GET'])
 def get_text_blocks(page_num):
@@ -48,88 +44,81 @@ def get_text_blocks(page_num):
         return jsonify({'error': 'No PDF loaded'}), 400
     
     blocks = []
+    
     try:
+        # First try to extract text normally
         with pdfplumber.open(current_pdf_path) as pdf:
-            if page_num >= len(pdf.pages):
-                return jsonify({'error': 'Page not found'}), 404
-            
-            page = pdf.pages[page_num]
-            
-            # Get characters with precise positions
-            chars = page.chars
-            
-            # Group characters into words and lines
-            lines = {}
-            for char in chars:
-                y_key = round(char['top'], 2)
-                if y_key not in lines:
-                    lines[y_key] = []
-                lines[y_key].append(char)
-            
-            # Process each line
-            for y_coord in sorted(lines.keys()):
-                line_chars = sorted(lines[y_coord], key=lambda c: c['x0'])
+            if page_num < len(pdf.pages):
+                page = pdf.pages[page_num]
+                text = page.extract_text()
                 
-                # Group into words based on spacing
-                words = []
-                current_word = []
-                last_x_end = None
-                
-                for char in line_chars:
-                    if last_x_end is not None and (char['x0'] - last_x_end) > char.get('size', 12) * 0.3:
-                        # Space detected - save current word
-                        if current_word:
-                            words.append(current_word)
-                            current_word = []
-                    current_word.append(char)
-                    last_x_end = char['x1']
-                
-                if current_word:
-                    words.append(current_word)
-                
-                # Create text blocks for each word
-                for word_chars in words:
-                    if word_chars:
-                        word_text = ''.join([c['text'] for c in word_chars])
-                        if word_text.strip():
-                            min_x = min([c['x0'] for c in word_chars])
-                            max_x = max([c['x1'] for c in word_chars])
-                            min_y = min([c['top'] for c in word_chars])
-                            max_y = max([c['bottom'] for c in word_chars])
+                if text and len(text.strip()) > 50:
+                    # Has real text - use pdfplumber
+                    words = page.extract_words()
+                    lines = {}
+                    for word in words:
+                        y_key = round(word['top'], 1)
+                        if y_key not in lines:
+                            lines[y_key] = []
+                        lines[y_key].append(word)
+                    
+                    for y_coord in sorted(lines.keys()):
+                        line_words = sorted(lines[y_coord], key=lambda w: w['x0'])
+                        line_text = ' '.join([w['text'] for w in line_words])
+                        if line_text.strip():
+                            min_x = min([w['x0'] for w in line_words])
+                            max_x = max([w['x1'] for w in line_words])
+                            min_y = min([w['top'] for w in line_words])
+                            max_y = max([w['bottom'] for w in line_words])
                             
                             blocks.append({
-                                "id": f"b_{len(blocks)}",
-                                "text": word_text,
+                                "id": f"line_{len(blocks)}",
+                                "text": line_text,
                                 "bbox": [min_x, min_y, max_x, max_y],
-                                "size": word_chars[0].get('size', 12),
-                                "font": word_chars[0].get('fontname', 'Helvetica'),
+                                "size": 12,
+                                "font": "Helvetica",
                                 "page": page_num
                             })
-            
-            # Also add full lines for easier editing
-            line_blocks = []
-            for y_coord in sorted(lines.keys()):
-                line_chars = sorted(lines[y_coord], key=lambda c: c['x0'])
-                if line_chars:
-                    line_text = ''.join([c['text'] for c in line_chars])
-                    if line_text.strip():
-                        min_x = min([c['x0'] for c in line_chars])
-                        max_x = max([c['x1'] for c in line_chars])
-                        min_y = min([c['top'] for c in line_chars])
-                        max_y = max([c['bottom'] for c in line_chars])
+                else:
+                    # No text found - use OCR for scanned PDF
+                    print(f"Page {page_num} appears to be a scanned image. Running OCR...")
+                    
+                    # Convert PDF page to image
+                    images = convert_from_path(
+                        current_pdf_path, 
+                        first_page=page_num+1, 
+                        last_page=page_num+1,
+                        dpi=200
+                    )
+                    
+                    if images:
+                        # Run OCR on the image
+                        custom_config = r'--oem 3 --psm 6'
+                        ocr_data = pytesseract.image_to_data(images[0], config=custom_config, output_type=pytesseract.Output.DICT)
                         
-                        line_blocks.append({
-                            "id": f"line_{len(line_blocks)}",
-                            "text": line_text,
-                            "bbox": [min_x, min_y, max_x, max_y],
-                            "size": line_chars[0].get('size', 12),
-                            "font": line_chars[0].get('fontname', 'Helvetica'),
-                            "page": page_num
-                        })
-            
-            # Use line blocks for better editing experience
-            blocks = line_blocks if line_blocks else blocks
-            
+                        # Group OCR results into text blocks
+                        n_boxes = len(ocr_data['text'])
+                        for i in range(n_boxes):
+                            text = ocr_data['text'][i].strip()
+                            if text and int(ocr_data['conf'][i]) > 30:  # Only include high-confidence text
+                                x = ocr_data['left'][i]
+                                y = ocr_data['top'][i]
+                                w = ocr_data['width'][i]
+                                h = ocr_data['height'][i]
+                                
+                                blocks.append({
+                                    "id": f"ocr_{len(blocks)}",
+                                    "text": text,
+                                    "bbox": [x, y, x + w, y + h],
+                                    "size": 14,
+                                    "font": "Helvetica",
+                                    "page": page_num
+                                })
+                        
+                        print(f"OCR extracted {len(blocks)} text blocks from scanned page")
+                    else:
+                        return jsonify({'error': 'Could not convert PDF page to image'}), 500
+                
     except Exception as e:
         print(f"Error: {e}")
         return jsonify({'error': str(e)}), 500
