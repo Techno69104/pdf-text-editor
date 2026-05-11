@@ -1,11 +1,10 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from pdf_editor import PDFTextEditor
 import os
 import tempfile
-import base64
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../frontend', static_url_path='')
 CORS(app)
 
 UPLOAD_FOLDER = tempfile.gettempdir()
@@ -13,6 +12,15 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 current_pdf_path = None
 current_editor = None
+
+# Serve frontend files
+@app.route('/')
+def serve_frontend():
+    return send_from_directory('../frontend', 'index.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory('../frontend', path)
 
 @app.route('/upload', methods=['POST'])
 def upload_pdf():
@@ -30,7 +38,6 @@ def upload_pdf():
 
 @app.route('/pages/<int:page_num>/text', methods=['GET'])
 def get_text_blocks(page_num):
-    """Get all text blocks that can be edited"""
     if not current_editor:
         return jsonify({'error': 'No PDF loaded'}), 400
     
@@ -39,7 +46,6 @@ def get_text_blocks(page_num):
 
 @app.route('/edit', methods=['POST'])
 def edit_text():
-    """Replace text at specific location"""
     if not current_editor:
         return jsonify({'error': 'No PDF loaded'}), 400
     
@@ -53,11 +59,8 @@ def edit_text():
         font_name=data.get('font', 'helv')
     )
     
-    # Save changes
     output_path = os.path.join(UPLOAD_FOLDER, 'edited.pdf')
     current_editor.save(output_path)
-    
-    # Reload the editor with the updated PDF
     current_editor = PDFTextEditor(output_path)
     
     return jsonify({
@@ -71,4 +74,4 @@ def download_pdf():
     return send_file(output_path, as_attachment=True, download_name='edited.pdf')
 
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000)
